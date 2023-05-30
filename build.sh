@@ -1,41 +1,65 @@
-#!/bin/bash
-# According to LineageOS 20 manifest kernel should be built using this prebuilt toolchain:
-# Clang: https://github.com/LineageOS/android_prebuilts_clang_kernel_linux-x86_clang-r416183b (branch lineage-20.0),
-# Crossgcc(aarch64): https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9 (branch lineage-19.1),
-# Crossgcc(arm): https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9 (branch lineage-19.1)
+#!/usr/bin/env bash
 
-OUTPUT_DIR='out'
-DEVICE='d2s'
+msg(){
+    echo
+    echo "==> $*"
+    echo
+}
 
-echo "Rendering the config from defconfig of the device specified..."
-make O=${OUTPUT_DIR} ARCH=arm64 exynos9820-${DEVICE}_defconfig
+err(){
+    echo 1>&2
+    echo "==> $*" 1>&2
+    echo 1>&2
+}
 
-echo "Building the kernel..."
-# Set PATH to clang only (Linux4 mentioned we don't need GCC anymore)
-PATH="/workdir/clang/bin:${PATH}"
-# Fix libdss-build path in Makefile so it won't be searched in OUTPUT dir
-sed -i 's|bash -C lib/libdss-build.sh|bash -C ../lib/libdss-build.sh|' Makefile
-rm -f build.log
-make -j$(nproc --all) 2>&1 O=${OUTPUT_DIR} \
-                           ARCH=arm64 \
-                           LLVM=1 | tee build.log
+defconfig_original="exynos9820-$2_defconfig"
+defconfig_gcov="exynos9820-$2-gcov_defconfig"
+defconfig_pgo="exynos9820-$2-pgo_defconfig"
 
-echo "Creating the DTB image..."
-build-tools/mkdtimg cfg_create ${OUTPUT_DIR}/dtb build-tools/exynos9820-dtb.cfg -d ${OUTPUT_DIR}/arch/arm64/boot/dts/exynos
+mode="$1"
+echo "Mode: $mode"
+if [ "$mode" = "gcov" ]; then
+    cp arch/arm64/configs/$defconfig_original arch/arm64/configs/$defconfig_gcov
+    echo "CONFIG_DEBUG_KERNEL=y"     >> arch/arm64/configs/$defconfig_gcov
+    echo "CONFIG_DEBUG_FS=y"         >> arch/arm64/configs/$defconfig_gcov
+    echo "CONFIG_GCOV_KERNEL=y"      >> arch/arm64/configs/$defconfig_gcov
+    echo "CONFIG_GCOV_PROFILE_ALL=y" >> arch/arm64/configs/$defconfig_gcov
+    defconfig=$defconfig_gcov
+elif [ "$mode" = "pgo" ]; then
+    cp arch/arm64/configs/$defconfig_original arch/arm64/configs/$defconfig_pgo
+    echo "CONFIG_PGO=y"              >> arch/arm64/configs/$defconfig_pgo
+    defconfig=$defconfig_pgo
+elif [ "$mode" = "none" ]; then
+    defconfig=$defconfig_original
+fi
 
-echo "Building installable zip with AnyKernel..."
-mv ${OUTPUT_DIR}/arch/arm64/boot/Image build-tools/AnyKernel3/zImage
-mv ${OUTPUT_DIR}/dtb build-tools/AnyKernel3/dtb
-cd build-tools/AnyKernel3 && zip -r9 LOS-Kernel-Unb0rn.zip .
+export ARCH="arm64"
+export CROSS_COMPILE="aarch64-elf-"
 
-# Cleanup
-rm -f  dtb zImage
+msg "Generating defconfig from \`make $defconfig\`..."
 
+if ! make O=out ARCH="arm64" $defconfig; then
+    err "Failed generating .config, make sure it is actually available in arch/${arch}/configs/ and is a valid defconfig file"
+    exit 2
+fi
 
-# This is here only for historical purposes - the kernel used to be build that way, also pathes to crossgcc should be added to PATH
-#make -j$(nproc --all) 2>&1 O=${OUTPUT_DIR} \
-#                           ARCH=arm64 \
-#                           CC=clang \
-#                           CLANG_TRIPLE=aarch64-linux-gnu- \
-#                           CROSS_COMPILE=aarch64-linux-android- \
-#                           CROSS_COMPILE_ARM32=arm-linux-androideabi-
+msg "Begin building kernel..."
+
+make O=out ARCH="arm64" -j"$(nproc --all)" prepare
+
+if ! make O=out ARCH="arm64" -j"$(nproc --all)"; then
+    err "Failed building kernel, probably the toolchain is not compatible with the kernel, or kernel source problem"
+    exit 3
+fi
+
+msg "Packaging the kernel..."
+
+rm -rf out/ak3
+cp -r ak3 out/
+
+cp out/arch/arm64/boot/Image out/ak3/Image
+tools/mkdtimg cfg_create out/ak3/dtb exynos9820.cfg -d out/arch/arm64/boot/dts/exynos
+
+cd out/ak3
+zip -r9 $2-$(/bin/date -u '+%Y%m%d-%H%M').zip .
+
