@@ -27,4 +27,7 @@ make -j$(nproc --all) 2>&1 O=${OUTPUT_DIR} \
 echo "Creating the DTB image..."
 build-tools/mkdtimg cfg_create ${OUTPUT_DIR}/dtb build-tools/exynos9820-dtb.cfg -d ${OUTPUT_DIR}/arch/arm64/boot/dts/exynos
 
-# ToDo - add AnyKernel3
+echo "Building installable zip with AnyKernel..."
+mv ${OUTPUT_DIR}/arch/arm64/boot/Image build-tools/AnyKernel3/zImage
+mv ${OUTPUT_DIR}/dtb build-tools/AnyKernel3/dtb
+cd build-tools/AnyKernel3 && zip -r9 LOS-Kernel-Unb0rn.zip .
