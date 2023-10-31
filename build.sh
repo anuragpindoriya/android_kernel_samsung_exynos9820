@@ -24,4 +24,7 @@ make -j$(nproc --all) 2>&1 O=${OUTPUT_DIR} \
 
 #CROSS_COMPILE_ARM32=arm-linux-androideabi-
 
+echo "Creating the DTB image..."
+build-tools/mkdtimg cfg_create ${OUTPUT_DIR}/dtb build-tools/exynos9820-dtb.cfg -d ${OUTPUT_DIR}/arch/arm64/boot/dts/exynos
+
 # ToDo - add AnyKernel3
