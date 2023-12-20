@@ -2,19 +2,24 @@ name: beyond2lte
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 6'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout kernel source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.1.1
         with:
           submodules: 'true'
           fetch-depth: 100
 
+      - name: Ccache for gh actions
+        uses: hendrikmuhs/ccache-action@v1.2.10
+
       - name: Checkout gcc toolchain
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4.1.1
         with:
           repository: mvaisakh/gcc-arm64
           ref: 05cb20a52f12389c3f2340b5103485108feae302
@@ -32,7 +37,7 @@ jobs:
           git log --no-decorate --oneline -n 100 > out/ak3/ChangeLog.txt
 
       - name: Upload final output
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.0.0
         with:
           name: release-ksu
           path: |
