@@ -12,6 +12,7 @@ err(){
     echo 1>&2
 }
 
+make clean && make mrproper
 defconfig_original="exynos9820-$2_defconfig"
 defconfig_gcov="exynos9820-$2-gcov_defconfig"
 defconfig_pgo="exynos9820-$2-pgo_defconfig"
@@ -32,7 +33,23 @@ elif [ "$mode" = "pgo" ]; then
 elif [ "$mode" = "none" ]; then
     defconfig=$defconfig_original
 fi
+# Clone Letest  stable kernelSU
 
+rm -rf KernelSU
+rm -rf drivers/kernelsu
+curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+
+
+if [ "$3" == "local" ]; then
+  export PATH="/home/anurag/Desktop/s10plusstrok/Kernel/toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin:${PATH}"
+fi
+# Dynamic generate name
+
+latest_version_of_Kernel_SU=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/latest | jq -r '.tag_name')
+TIMESTAMP=$(TZ=UTC-8 date +%Y%m%d%H%M)
+CONFIG_LOCALVERSION="-An-UNKNOWN-$2-$latest_version_of_Kernel_SU"
+
+# Dynamic generate name
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-elf-"
 
@@ -43,7 +60,7 @@ msg ""
 msg "-------------------------------------------------------------------"
 
 if ! make O=out ARCH="arm64" $defconfig; then
-    err "Failed generating .config, make sure it is actually available in arch/${arch}/configs/ and is a valid defconfig file"
+    err "Failed generating .config, make sure it is actually available in arch/${ARCH}/configs/ and is a valid defconfig file"
     exit 2
 fi
 msg "-------------------------------------------------------------------"
@@ -52,9 +69,9 @@ msg "Begin building kernel..."
 msg ""
 msg "-------------------------------------------------------------------"
 
-make O=out ARCH="arm64" -j"$(nproc --all)" prepare
+make O=out ARCH="arm64" -j"$(nproc --all)" LOCAL_prepare
 
-if ! make O=out ARCH="arm64" -j"$(nproc --all)"; then
+if ! make O=out ARCH="arm64" -j"$(nproc --all)" LOCALVERSION="$CONFIG_LOCALVERSION"; then
     err "Failed building kernel, probably the toolchain is not compatible with the kernel, or kernel source problem"
     exit 3
 fi
@@ -72,5 +89,5 @@ cp out/arch/arm64/boot/Image out/ak3/Image
 tools/mkdtimg cfg_create out/ak3/dtb exynos9820.cfg -d out/arch/arm64/boot/dts/exynos
 
 cd out/ak3
-zip -r9 $2-$(/bin/date -u '+%Y%m%d-%H%M').zip .
+zip -r9 $2-'$(/bin/date -u '+%Y%m%d-%H%M')'.zip .
 
