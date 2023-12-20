@@ -12,16 +12,24 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      # ...
+      - name: Checkout kernel source
+        uses: actions/checkout@v4.1.1
+        with:
+          submodules: 'true'
+          fetch-depth: 100
+
       - name: "Build & test"
         run: |
           echo "done!"
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "v7.1.0-323356321654"
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          title: ${{ env.FINAL_TAG }}
+          automatic_release_tag: ${{ env.FINAL_TAG }}
           prerelease: false
+          run: |
+            ls
           files: |
-            LICENSE.txt
-            *.jar
+            ${pwd}/build.sh
+            ${pwd}/out/ak3/*.zip
