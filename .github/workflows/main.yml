@@ -56,5 +56,5 @@ jobs:
           automatic_release_tag: ${{ env.FINAL_TAG }}
           prerelease: false
           files: |
-            out/ak3Image
-            out/ak3/*.zip*.zip
+            ${pwd}/out/ak3/Image
+            ${pwd}/out/ak3/*.zip
