@@ -36,14 +36,21 @@ fi
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-elf-"
 
+msg "-------------------------------------------------------------------"
+msg ""
 msg "Generating defconfig from \`make $defconfig\`..."
+msg ""
+msg "-------------------------------------------------------------------"
 
 if ! make O=out ARCH="arm64" $defconfig; then
     err "Failed generating .config, make sure it is actually available in arch/${arch}/configs/ and is a valid defconfig file"
     exit 2
 fi
-
+msg "-------------------------------------------------------------------"
+msg ""
 msg "Begin building kernel..."
+msg ""
+msg "-------------------------------------------------------------------"
 
 make O=out ARCH="arm64" -j"$(nproc --all)" prepare
 
@@ -52,7 +59,11 @@ if ! make O=out ARCH="arm64" -j"$(nproc --all)"; then
     exit 3
 fi
 
+msg "-------------------------------------------------------------------"
+msg ""
 msg "Packaging the kernel..."
+msg ""
+msg "-------------------------------------------------------------------"
 
 rm -rf out/ak3
 cp -r ak3 out/
