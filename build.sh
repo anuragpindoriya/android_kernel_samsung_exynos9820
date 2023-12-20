@@ -33,6 +33,12 @@ elif [ "$mode" = "none" ]; then
     defconfig=$defconfig_original
 fi
 
+# Dynamic generate name
+latest_version_of_Kernel_SU=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/latest | jq -r '.tag_name')
+TIMESTAMP=$(TZ=UTC-8 date +%Y%m%d%H%M)
+CONFIG_LOCALVERSION="-An-UNKNOWN-$2-$latest_version_of_Kernel_SU"
+# Dynamic generate name
+
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-elf-"
 
@@ -47,7 +53,7 @@ msg "Begin building kernel..."
 
 make O=out ARCH="arm64" -j"$(nproc --all)" prepare
 
-if ! make O=out ARCH="arm64" -j"$(nproc --all)"; then
+if ! make O=out ARCH="arm64" -j"$(nproc --all)" LOCALVERSION="$CONFIG_LOCALVERSION" ; then
     err "Failed building kernel, probably the toolchain is not compatible with the kernel, or kernel source problem"
     exit 3
 fi
@@ -61,5 +67,6 @@ cp out/arch/arm64/boot/Image out/ak3/Image
 tools/mkdtimg cfg_create out/ak3/dtb exynos9820.cfg -d out/arch/arm64/boot/dts/exynos
 
 cd out/ak3
-zip -r9 $2-$(/bin/date -u '+%Y%m%d-%H%M').zip .
+
+zip -r9 "$(CONFIG_LOCALVERSION)"-"$(TIMESTAMP)".zip .
 
