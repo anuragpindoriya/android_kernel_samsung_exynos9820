@@ -41,6 +41,13 @@ jobs:
           timestamp=$(TZ=UTC-8 date +%Y%m%d%H%M)
           final_tag="${latest_version_of_kernel_su}.${timestamp}"  # Consistent naming
           echo "FINAL_TAG=$final_tag" >> $GITHUB_ENV  # Set only the necessary variable
+          ls
+          echo "-------------------------------"
+          cd out
+          ls
+          echo "-------------------------------"
+          cd ak3
+          ls
           
 
       - name: Upload final output
@@ -58,5 +65,5 @@ jobs:
           automatic_release_tag: ${{ env.FINAL_TAG }}
           prerelease: false
           files: |
-            ${pwd}/out/ak3/Image
+            out/ak3/Image
             ${pwd}/out/ak3/*.zip
