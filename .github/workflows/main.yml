@@ -27,7 +27,9 @@ jobs:
 
       - name: Fetch KernelSU
         run: |
-          git submodule update --init --recursive
+          rm -rf KernelSU
+          rm -rf drivers/kernelsu
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
 
       - name: Android kernel build
         run: |
