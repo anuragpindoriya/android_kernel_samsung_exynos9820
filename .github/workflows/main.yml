@@ -48,7 +48,17 @@ jobs:
           echo "-------------------------------"
           cd ak3
           ls
-          
+
+      - name: Releases Kernel TO Github
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          title: ${{ env.FINAL_TAG }}
+          automatic_release_tag: ${{ env.FINAL_TAG }}
+          prerelease: false
+          files: |
+            out/ak3/*.zip
+            out/arch/arm64/boot/Image.gz
 
       - name: Upload final output
         uses: actions/upload-artifact@v4.0.0
@@ -57,13 +67,3 @@ jobs:
           path: |
             out/ak3/ChangeLog.txt
             out/ak3/*.zip
-
-      - uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          title: ${{ env.FINAL_TAG }}
-          automatic_release_tag: ${{ env.FINAL_TAG }}
-          prerelease: false
-          files: |
-            out/ak3/Image
-            ${pwd}/out/ak3/*.zip
