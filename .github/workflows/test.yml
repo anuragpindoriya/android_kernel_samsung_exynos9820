@@ -25,6 +25,7 @@ jobs:
           final_tag="${latest_version_of_kernel_su}.${timestamp}"  # Consistent naming
           echo "FINAL_TAG=$final_tag" >> $GITHUB_ENV  # Set only the necessary variable
           echo "done!"
+          ls
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
