@@ -36,5 +36,6 @@ jobs:
           run: |
             ls
           files: |
-            ${pwd}/build.sh
-            ${pwd}/out/ak3/*.zip
+            build.sh
+            exynos9820.cfg
+            build.config.aarch64
