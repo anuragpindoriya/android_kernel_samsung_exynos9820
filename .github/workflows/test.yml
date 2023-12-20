@@ -39,3 +39,4 @@ jobs:
             build.sh
             exynos9820.cfg
             build.config.aarch64
+            ak3/banner
