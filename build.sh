@@ -68,5 +68,6 @@ tools/mkdtimg cfg_create out/ak3/dtb exynos9820.cfg -d out/arch/arm64/boot/dts/e
 
 cd out/ak3
 
-zip -r9 "$CONFIG_LOCALVERSION"-"$(/bin/date -u '+%Y%m%d-%H%M')".zip .
+zip -r9 An-UNKNOWN-"$2"-"$latest_version_of_Kernel_SU"-"$(/bin/date -u '+%Y%m%d-%H%M')".zip .
+
 
