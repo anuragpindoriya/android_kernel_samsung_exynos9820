@@ -35,8 +35,11 @@ jobs:
           export PATH="$(pwd)/toolchain/bin:${PATH}"
           bash build.sh none beyond2lte
           git log --no-decorate --oneline -n 100 > out/ak3/ChangeLog.txt
-          latest_version_of_Kernel_SU=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/latest | jq -r '.tag_name')
-          TIMESTAMP=$(TZ=UTC-8 date +%Y%m%d%H%M)
+          latest_version_of_kernel_su=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/latest | jq -r '.tag_name')
+          timestamp=$(TZ=UTC-8 date +%Y%m%d%H%M)
+          final_tag="${latest_version_of_kernel_su}.${timestamp}"  # Consistent naming
+          echo "FINAL_TAG=$final_tag" >> $GITHUB_ENV  # Set only the necessary variable
+          
 
       - name: Upload final output
         uses: actions/upload-artifact@v4.0.0
@@ -48,9 +51,10 @@ jobs:
 
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "${{ env.latest_version_of_Kernel_SU }}-${{ env.TIMESTAMP }}"
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          title: ${{ env.FINAL_TAG }}
+          automatic_release_tag: ${{ env.FINAL_TAG }}
           prerelease: false
           files: |
-            Image
-            *.zip
+            out/ak3Image
+            out/ak3/*.zip*.zip
