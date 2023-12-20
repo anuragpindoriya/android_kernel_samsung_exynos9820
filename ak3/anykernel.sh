@@ -4,20 +4,24 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=S10/N10 Kernel
-do.devicecheck=0
+kernel.string=S10/+/e and /N10/+ Kernel
+do.devicecheck=1
 do.modules=0
 do.systemless=1
 do.cleanup=1
 do.cleanuponabort=0
-device.name1=
+device.name1=beyond0lte
+device.name2=beyond1lte
+device.name3=beyond2lte
+device.name4=beyondx
+device.name5=d2x
 supported.versions=
 supported.patchlevels=
 '; } # end properties
 
 # shell variables
 block=$boot;
-is_slot_device=0;
+is_slot_device=auto;
 ramdisk_compression=auto;
 
 ## AnyKernel methods (DO NOT CHANGE)
