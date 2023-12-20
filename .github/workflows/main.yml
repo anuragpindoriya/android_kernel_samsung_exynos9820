@@ -35,6 +35,8 @@ jobs:
           export PATH="$(pwd)/toolchain/bin:${PATH}"
           bash build.sh none beyond2lte
           git log --no-decorate --oneline -n 100 > out/ak3/ChangeLog.txt
+          latest_version_of_Kernel_SU=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/latest | jq -r '.tag_name')
+          TIMESTAMP=$(TZ=UTC-8 date +%Y%m%d%H%M)
 
       - name: Upload final output
         uses: actions/upload-artifact@v4.0.0
@@ -43,3 +45,12 @@ jobs:
           path: |
             out/ak3/ChangeLog.txt
             out/ak3/*.zip
+
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "${{latest_version_of_Kernel_SU}}-${{TIMESTAMP}}"
+          prerelease: false
+          files: |
+            Image
+            *.zip
