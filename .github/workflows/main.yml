@@ -29,7 +29,7 @@ jobs:
         run: |
           rm -rf KernelSU
           rm -rf drivers/kernelsu
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
 
       - name: Android kernel build
         run: |
@@ -37,9 +37,8 @@ jobs:
           export PATH="$(pwd)/toolchain/bin:${PATH}"
           bash build.sh none beyond2lte
           git log --no-decorate --oneline -n 100 > out/ak3/ChangeLog.txt
-          latest_version_of_kernel_su=$(curl -s https://api.github.com/repos/tiann/KernelSU/releases/latest | jq -r '.tag_name')
           timestamp=$(TZ=UTC-8 date +%Y%m%d%H%M)
-          final_tag="${latest_version_of_kernel_su}.${timestamp}"  # Consistent naming
+          final_tag="v0.9.5.${timestamp}"  # Consistent naming
           echo "FINAL_TAG=$final_tag" >> $GITHUB_ENV  # Set only the necessary variable
           ls
           echo "-------------------------------"
