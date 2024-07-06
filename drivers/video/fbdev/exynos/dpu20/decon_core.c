@@ -2626,6 +2626,20 @@ video_emul_check_done:
 			goto end;
 		}
 	} else {
+		if (regs->dpp_config[DECON_WIN_UPDATE_IDX].state ==
+				DECON_WIN_STATE_MRESOL) {
+			if (regs->mres_update) {
+				if ((decon->dt.psr_mode == DECON_MIPI_COMMAND_MODE) &&
+					(decon->dt.trig_mode == DECON_HW_TRIG)) {
+					if (decon_reg_wait_update_done_timeout(decon->id,
+								SHADOW_UPDATE_TIMEOUT) < 0)
+						decon_err("%s(%d) shadow update timeout\n", __func__, __LINE__);
+					decon_reg_set_trigger(decon->id, &psr, DECON_TRIG_DISABLE);
+				}
+				dpu_set_mres_config(decon, regs);
+			}
+		}
+
 		decon_save_cur_buf_info(decon, regs);
 		decon_wait_for_vsync(decon, VSYNC_TIMEOUT_MSEC);
 		goto end;
@@ -3244,6 +3258,64 @@ static int decon_set_color_mode(struct decon_device *decon,
 	return ret;
 }
 
+static int decon_get_vsync_change_timeline(struct decon_device *decon,
+		struct vsync_applied_time_data *vsync_time)
+{
+	struct decon_lcd *lcd_info = decon->lcd_info;
+	u64 last_vsync, cur_nsec, next_vsync;
+	u64 vsync_period;
+	u32 frames;
+	int ret = 0;
+
+	decon_dbg("%s +\n", __func__);
+	mutex_lock(&decon->lock);
+
+	if (!decon->mres_enabled) {
+		decon_warn("MRES is not enabled\n");
+		/* EPERM(1) : Operation not permitted */
+		ret = -EPERM;
+		goto end;
+	}
+
+	if (vsync_time->config >= lcd_info->dt_lcd_mres.mres_number){
+		decon_err("requested configId(%d) is out of range!\n", vsync_time->config);
+		ret = -EINVAL;
+		goto end;
+	}
+
+	if (vsync_time->config == lcd_info->mres_mode - DSU_MODE_1) {
+		decon_warn("requested configId is same as current one\n");
+		ret = -EINVAL;
+		goto end;
+	}
+
+	vsync_period = 1000000000UL / lcd_info->fps;
+
+	last_vsync = ktime_to_ns(decon->vsync.timestamp);
+	cur_nsec = ktime_to_ns(ktime_get());
+
+	if (cur_nsec <= last_vsync)
+		next_vsync = last_vsync;
+	else {
+		next_vsync = last_vsync +
+				(cur_nsec - last_vsync) / vsync_period * vsync_period;
+	}
+
+	frames = atomic_read(&decon->up.remaining_frame);
+	if (frames > 0)
+		frames--;
+	vsync_time->time = max(cur_nsec, next_vsync + frames * vsync_period);
+
+	decon_dbg("EXYNOS_GET_VSYNC_CHANGE_TIMELINE: config(%d) => time(%llu)\n",
+				vsync_time->config, vsync_time->time);
+
+end:
+	mutex_unlock(&decon->lock);
+	decon_dbg("%s -\n", __func__);
+
+	return ret;
+}
+
 static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
 {
@@ -3265,6 +3337,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	struct decon_edid_data edid_data;
 	struct decon_display_mode dm_info;
 	struct decon_reg_data decon_regs;
+	struct vsync_applied_time_data vsync_time;
 	u32 color_mode;
 	int ret = 0;
 	u32 crtc;
@@ -3275,6 +3348,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 	int i;
 	u32 cm_num;
 	u32 dm_num;
+	u32 actual_mres_mode;
 
 	decon_hiber_block_exit(decon);
 	switch (cmd) {
@@ -3619,6 +3693,7 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			dm_info.mm_width = lcd_info->width;
 			dm_info.mm_height = lcd_info->height;
 			dm_info.fps = lcd_info->fps;
+			dm_info.group = dm_info.index;
 		} else {
 			ret = -EINVAL;
 			break;
@@ -3655,6 +3730,32 @@ static int decon_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
+		break;
+
+	case EXYNOS_GET_DISPLAY_CURRENT_MODE:
+		actual_mres_mode = lcd_info->mres_mode - DSU_MODE_1;
+
+		if (copy_to_user((u32 __user *)arg, &actual_mres_mode, sizeof(u32)))
+			ret = -EFAULT;
+		break;
+
+	case EXYNOS_GET_VSYNC_CHANGE_TIMELINE:
+		if (copy_from_user(&vsync_time,
+				   (struct vsync_applied_time_data __user *)arg,
+				   sizeof(vsync_time))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		ret = decon_get_vsync_change_timeline(decon, &vsync_time);
+		if (ret)
+			break;
+
+		if (copy_to_user((struct vsync_applied_time_data __user *)arg,
+					&vsync_time, sizeof(vsync_time))) {
+			ret = -EFAULT;
+			break;
+		}
 		break;
 
 	default:
